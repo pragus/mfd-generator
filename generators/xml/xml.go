@@ -1,6 +1,8 @@
 package xml
 
 import (
+	"strings"
+
 	"github.com/vmkteam/mfd-generator/mfd"
 
 	"github.com/dizzyfool/genna/model"
@@ -51,7 +53,7 @@ func PackEntity(namespace string, entity model.Entity, existing *mfd.Entity, new
 		}
 
 		// making string searchable by like
-		if !column.IsArray && column.GoType == model.TypeString && column.PGName != "alias" && column.PGName != "password" {
+		if !column.IsArray && !column.IsEnum && column.GoType == model.TypeString && column.PGName != "alias" && column.PGName != "password" {
 			searches = searches.Append(newSearch(*attribute, mfd.SearchILike))
 		}
 	}
@@ -92,7 +94,7 @@ func newAttribute(entity model.Entity, column model.Column) *mfd.Attribute {
 		}
 	}
 
-	return &mfd.Attribute{
+	attr := &mfd.Attribute{
 		Name:    column.GoName,
 		DBName:  column.PGName,
 		DBType:  column.PGType,
@@ -110,6 +112,20 @@ func newAttribute(entity model.Entity, column model.Column) *mfd.Attribute {
 		Min:        0,
 		Max:        column.MaxLen,
 	}
+
+	if column.IsEnum && column.EnumType != "" {
+		enumGoType := util.CamelCased(util.Sanitize(column.EnumType))
+		attr.IsEnum = true
+		attr.EnumType = column.EnumType
+		attr.EnumValues = strings.Join(column.Values, ",")
+		if column.IsArray {
+			attr.GoType = "[]" + enumGoType
+		} else {
+			attr.GoType = enumGoType
+		}
+	}
+
+	return attr
 }
 
 func newSearch(attribute mfd.Attribute, searchType mfd.SearchType) *mfd.Search {
