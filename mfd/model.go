@@ -719,6 +719,10 @@ type Attribute struct {
 	DBType         string `xml:"DBType,attr,omitempty" json:"dbType"`
 	GoType         string `xml:"GoType,attr,omitempty" json:"goType"`
 
+	IsEnum     bool   `xml:"IsEnum,attr,omitempty" json:"isEnum,omitempty"`
+	EnumType   string `xml:"EnumType,attr,omitempty" json:"enumType,omitempty"`
+	EnumValues string `xml:"EnumValues,attr,omitempty" json:"enumValues,omitempty"`
+
 	PrimaryKey    bool    `xml:"PK,attr" json:"pk"`
 	ForeignKey    string  `xml:"FK,attr,omitempty" json:"fk"`
 	ForeignEntity *Entity `xml:"-" json:"-"`
@@ -735,10 +739,15 @@ type Attribute struct {
 
 // Merge fills attribute (from file) values from db
 func (a *Attribute) Merge(with *Attribute, overwriteGoType bool) {
+	enumChanged := a.IsEnum != with.IsEnum
+
 	// a.Name = with.Name
 	a.DBName = with.DBName
 	a.DBType = with.DBType
 	a.IsArray = with.IsArray
+	a.IsEnum = with.IsEnum
+	a.EnumType = with.EnumType
+	a.EnumValues = with.EnumValues
 	a.ForeignKey = with.ForeignKey
 	a.ForeignEntity = with.ForeignEntity
 	a.Max = with.Max
@@ -755,9 +764,16 @@ func (a *Attribute) Merge(with *Attribute, overwriteGoType bool) {
 		a.Updatable = &updatable
 	}
 
-	if overwriteGoType {
+	if enumChanged || overwriteGoType {
 		a.GoType = with.GoType
 	}
+}
+
+func (a *Attribute) EnumValuesList() []string {
+	if a.EnumValues == "" {
+		return nil
+	}
+	return strings.Split(a.EnumValues, ",")
 }
 
 func (a *Attribute) IsInteger() bool {

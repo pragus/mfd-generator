@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"html/template"
+	"sort"
 
 	"github.com/vmkteam/mfd-generator/mfd"
 
@@ -11,6 +12,18 @@ import (
 )
 
 // this code is used to pack mdf to template
+
+// EnumData stores enum type info for template
+type EnumData struct {
+	Name   string
+	Values []EnumValueData
+}
+
+// EnumValueData stores a single enum constant
+type EnumValueData struct {
+	ConstName string
+	Value     string
+}
 
 // NamespaceData stores package info
 type NamespaceData struct {
@@ -22,12 +35,16 @@ type NamespaceData struct {
 
 	GoPGVer string
 
+	HasEnums  bool
+	EnumTypes []EnumData
+
 	Entities []EntityData
 }
 
 // PackNamespace creates a package for template
 func PackNamespace(namespaces []*mfd.Namespace, options Options) NamespaceData {
 	imports := mfd.NewSet()
+	enumMap := map[string]EnumData{}
 
 	var models []EntityData
 	for _, namespace := range namespaces {
@@ -39,8 +56,32 @@ func PackNamespace(namespaces []*mfd.Namespace, options Options) NamespaceData {
 			for _, imp := range mdl.Imports {
 				imports.Add(imp)
 			}
+			// collecting unique enum types
+			for _, attr := range entity.Attributes {
+				if !attr.IsEnum || attr.EnumType == "" {
+					continue
+				}
+				goName := util.CamelCased(util.Sanitize(attr.EnumType))
+				if _, exists := enumMap[goName]; exists {
+					continue
+				}
+				var values []EnumValueData
+				for _, v := range attr.EnumValuesList() {
+					values = append(values, EnumValueData{
+						ConstName: goName + util.CamelCased(util.Sanitize(v)),
+						Value:     v,
+					})
+				}
+				enumMap[goName] = EnumData{Name: goName, Values: values}
+			}
 		}
 	}
+
+	enumTypes := make([]EnumData, 0, len(enumMap))
+	for _, e := range enumMap {
+		enumTypes = append(enumTypes, e)
+	}
+	sort.Slice(enumTypes, func(i, j int) bool { return enumTypes[i].Name < enumTypes[j].Name })
 
 	goPGVer := ""
 	if options.GoPGVer != mfd.GoPG8 {
@@ -55,6 +96,9 @@ func PackNamespace(namespaces []*mfd.Namespace, options Options) NamespaceData {
 		Imports:    imports.Elements(),
 
 		GoPGVer: goPGVer,
+
+		HasEnums:  len(enumTypes) > 0,
+		EnumTypes: enumTypes,
 
 		Entities: models,
 	}
