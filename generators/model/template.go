@@ -47,6 +47,13 @@ var Tables = struct {
 		Alias: "{{.Alias}}",
 	},{{end}}
 }
+{{if .HasEnums}}{{range $enum := .EnumTypes}}
+type {{$enum.Name}} string
+
+const ({{range $enum.Values}}
+	{{.ConstName}} {{$enum.Name}} = "{{.Value}}"{{end}}
+)
+{{end}}{{end}}
 {{range $model := .Entities}}
 type {{.Name}} struct {
 	tableName struct{} {{.Tag}}

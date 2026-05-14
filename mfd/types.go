@@ -147,6 +147,10 @@ func MakeJSZero(typ string, isArray bool) string {
 
 // Import gets import string for template
 func Import(attribute *Attribute, goPGVer int, customTypes CustomTypes) string {
+	if attribute.IsEnum {
+		return ""
+	}
+
 	if customTypes != nil {
 		if imp, ok := customTypes.GoImport(Element(attribute.GoType), attribute.DBType); ok {
 			return imp
