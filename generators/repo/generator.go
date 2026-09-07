@@ -133,7 +133,7 @@ func (g *Generator) Generate() error {
 
 	if g.options.Mode == ModeGeneric {
 		output := path.Join(g.options.Output, "gendb.go")
-		if _, err := mfd.FormatAndSave(g.options, output, repoRuntimeTemplate, true); err != nil {
+		if _, err := mfd.FormatAndSave(g.options, output, genericRuntimeTemplate(g.options.Package), true); err != nil {
 			return fmt.Errorf("generate generic runtime, err=%w", err)
 		}
 	}
