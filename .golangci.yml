@@ -397,6 +397,9 @@ linters:
           - gosec
           - noctx
           - wrapcheck
+      - path: '^go\.mod$'
+        linters:
+          - gomoddirectives
 formatters:
   enable:
     - gci
