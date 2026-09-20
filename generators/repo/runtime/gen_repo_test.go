@@ -1,11 +1,21 @@
 package runtime
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/go-pg/pg/v10/orm"
 )
+
+func TestGenRepoForEachSignature(t *testing.T) {
+	repo := NewGenRepo[struct{}](nil)
+
+	var forEach func(context.Context, Applier, Applier, func(struct{}) error, ...Applier) error = repo.ForEach
+	if forEach == nil {
+		t.Fatal("GenRepo.ForEach is nil")
+	}
+}
 
 func TestApplyAppliersStopsAtFirstError(t *testing.T) {
 	query := new(orm.Query)

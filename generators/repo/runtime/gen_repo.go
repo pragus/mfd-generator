@@ -12,6 +12,9 @@ import (
 // Applier is the shared go-pg query transformation contract.
 type Applier = func(query *orm.Query) (*orm.Query, error)
 
+// ErrForEachRelations is returned when ForEach receives a query with relations.
+var ErrForEachRelations = errors.New("ForEach does not support relations")
+
 // RepoOption configures generated generic repositories.
 type RepoOption func(*repoConfig)
 
@@ -121,6 +124,34 @@ func (repo GenRepo[T]) List(ctx context.Context, search, pager Applier, options 
 		return nil, err
 	}
 	return models, nil
+}
+
+// ForEach scans matching models without materializing the result set.
+// It rejects relation queries, and visit must not retain reference fields from value.
+func (repo GenRepo[T]) ForEach(ctx context.Context, search, pager Applier, visit func(T) error, options ...Applier) error {
+	query, err := repo.readQuery(ctx, new(T), search, pager, options...)
+	if err != nil {
+		return err
+	}
+	if tableModel := query.TableModel(); tableModel != nil && len(tableModel.GetJoins()) > 0 {
+		return ErrForEachRelations
+	}
+
+	var visitErr error
+	err = query.ForEach(func(model *T) error {
+		if visitErr != nil {
+			return nil
+		}
+		visitErr = visit(*model)
+		return nil
+	})
+	if visitErr != nil && err != nil {
+		return errors.Join(visitErr, err)
+	}
+	if visitErr != nil {
+		return visitErr
+	}
+	return err
 }
 
 // Count returns the number of matching models.

@@ -156,6 +156,16 @@ func TestGeneratedRuntimeCRUD(t *testing.T) {
 	if err != nil || len(list) != 1 {
 		t.Fatalf("List() = %d, %v", len(list), err)
 	}
+	var iterated []int
+	if err := repo.ForEach(ctx, nil, nil, func(value Category) error {
+		iterated = append(iterated, value.ID)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(iterated) != 1 || iterated[0] != category.ID {
+		t.Fatalf("ForEach() = %v, want [%d]", iterated, category.ID)
+	}
 
 	assertSentinel("Update", func(applier Applier) error {
 		_, err := repo.Update(ctx, category, applier)
